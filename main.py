@@ -1,1 +1,3 @@
-__author__ = 'Kenny'
+import RPi.GPIO as GPIO
+
+GPIO.VERSION
