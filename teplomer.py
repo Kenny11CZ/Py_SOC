@@ -30,5 +30,5 @@ def read_temp(cislo):
 	
 while True:
     for i in range(0, 2):
-        print(i+1 + ") " + read_temp(i))
+        print(str(i+1) + ") " + str(read_temp(i)))
 	time.sleep(1)
