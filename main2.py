@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 #
 # HD44780 20x4 LCD Test Script for
 # Raspberry Pi
@@ -27,9 +28,17 @@
 # 15: LCD Backlight +5V**
 # 16: LCD Backlight GND
 
-#import
 import RPi.GPIO as GPIO
 import time
+import os
+import glob
+
+os.system('modprobe w1-gpio')
+os.system('modprobe w1-therm')
+ 
+base_dir = '/sys/bus/w1/devices/'
+device_folder = glob.glob(base_dir + '28*')
+
 
 # Define GPIO to LCD mapping
 LCD_RS = 7
@@ -54,6 +63,25 @@ LCD_LINE_4 = 0xD4 # LCD RAM address for the 4th line
 E_PULSE = 0.00005
 E_DELAY = 0.00005
 
+def read_temp_raw(cislo):
+    cislo = int(cislo);
+    device_file = device_folder[cislo] + '/w1_slave'
+    f = open(device_file, 'r')
+    lines = f.readlines()
+    f.close()
+    return lines
+ 
+def read_temp(cislo):
+        lines = read_temp_raw(cislo)
+        while lines[0].strip()[-3:] != 'YES':
+            time.sleep(0.2)
+            lines = read_temp_raw()
+        equals_pos = lines[1].find('t=')
+        if equals_pos != -1:
+            temp_string = lines[1][equals_pos+2:]
+            temp_c = float(temp_string) / 1000.0
+            return temp_c
+
 def main():
   # Main program block
 
@@ -69,49 +97,17 @@ def main():
   # Initialise display
   lcd_init()
 
-  # Toggle backlight off-on
-  GPIO.output(LED_ON, False)
-  time.sleep(1)
-  GPIO.output(LED_ON, True)
-  time.sleep(1)
-
-  # Send some centred test
-  lcd_byte(LCD_LINE_1, LCD_CMD)
-  lcd_string("--------------------",2) 
-  lcd_byte(LCD_LINE_2, LCD_CMD)
-  lcd_string("Rasbperry Pi",2)
-  lcd_byte(LCD_LINE_3, LCD_CMD)
-  lcd_string("Model B",2)
-  lcd_byte(LCD_LINE_4, LCD_CMD)
-  lcd_string("--------------------",2)    
-  print "psani"
-  time.sleep(3) # 3 second delay 
-
-  lcd_byte(LCD_LINE_1, LCD_CMD)
-  lcd_string("Raspberrypi-spy",3)
-  lcd_byte(LCD_LINE_2, LCD_CMD)
-  lcd_string(".co.uk",3)  
-  lcd_byte(LCD_LINE_3, LCD_CMD)
-  lcd_string("",2) 
-  lcd_byte(LCD_LINE_4, LCD_CMD)
-  lcd_string("20x4 LCD Module Test",2)   
-
-  time.sleep(20) # 20 second delay 
-
-  # Blank display
-  lcd_byte(LCD_LINE_1, LCD_CMD)
-  lcd_string("",3)
-  lcd_byte(LCD_LINE_2, LCD_CMD)
-  lcd_string("",3)  
-  lcd_byte(LCD_LINE_3, LCD_CMD)
-  lcd_string("",2) 
-  lcd_byte(LCD_LINE_4, LCD_CMD)
-  lcd_string("",2)    
-
-  time.sleep(3) # 3 second delay  
-
-  # Turn off backlight
-  GPIO.output(LED_ON, False)
+  while(1):
+    temp0 = read_temp(0)
+    temp1 = read_temp(1)
+    lcd_byte(LCD_LINE_1, LCD_CMD)
+    lcd_string(" Datum   " + time.strftime("%d.%m.%Y"),1)
+    lcd_byte(LCD_LINE_2, LCD_CMD)
+    lcd_string(" Cas       " + time.strftime("%H:%M:%S"),1)  
+    lcd_byte(LCD_LINE_3, LCD_CMD)
+    lcd_string(" Teplota IN  {:5.1f}'C".format(temp0),1) 
+    lcd_byte(LCD_LINE_4, LCD_CMD)
+    lcd_string(" Teplota OUT {:5.1f}'C".format(temp1),1)   
 
 def lcd_init():
   # Initialise display
